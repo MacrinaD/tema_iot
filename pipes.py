@@ -1,5 +1,6 @@
 import os
 import select
+import time
 
 from helper import process_bytes
 
@@ -36,6 +37,7 @@ class Pipes:
                 sampler.register(sensor_data, select.POLLIN)
                 try:
                     while not self.killthreads and not value_was_received:
+                        time.sleep(1)
                         if (sensor_data, select.POLLIN) in sampler.poll(2000):
                             temp_value = process_bytes(sensor_data)
                             self.__received_data = temp_value

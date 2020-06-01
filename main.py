@@ -19,6 +19,15 @@ def hello():
     return "Hello World!"
 
 
+@app.route('/api/directory3', methods=['GET'])
+def get_files_from_sensor_configuration():
+    files = glob.glob("./sensor_configuration/*")
+    response = []
+    for file in files:
+        response.append(os.path.basename(file))
+    return response
+
+
 @app.route('/api/directory3/<sensorName>', methods=['GET'])
 def get_data_from_sensor(sensorName):
     FIFO_NAME = Pipes.FIFO_REQUEST
@@ -43,24 +52,66 @@ def get_data_from_sensor(sensorName):
     return ret_val
 
 
-@app.route('/api/directory3/<configuration_file>', methods=['POST'])
-def post_data_to_sens_configuration(configuration_file):
-    file = './sensor_configuration/' + configuration_file
+@app.route('/api/directory/<senzor_name>', methods=['POST'])
+def post_data_to_sens_configuration(senzor_name):
+    file = './sensor_configuration/' + senzor_name + "_config.txt"
     print(file)
     data = request.get_data()
     print(data)
     if os.path.exists(file) is False:
         os.mknod(file)
     else:
-        return 400
+        return "Bad Request", 400
 
     if not data or len(data) == 0:
-        return 204
+        return "NOK", 204
 
-    file = open(file, 'w+')
+    file = open(file, 'w')
     file.write(data.decode('ascii'))
     file.close()
     return "OK"
+
+
+@app.route('/api/<senzor_name>/celsius', methods=['PUT'])
+def update_config_celsius(senzor_name):
+    config_file_name = "./sensor_configuration/" + senzor_name + "_config.txt"
+    if os.path.exists(config_file_name) is False:
+        return "Fisierul de configurare pentru senzor nu exista.", 204
+
+    else:
+
+        file = open(config_file_name, 'w')
+        file.write("celsius")
+        file.close()
+        return "OK"
+
+
+@app.route('/api/<senzor_name>/fahrenheit', methods=['PUT'])
+def update_config_Fahrenheit(senzor_name):
+    config_file_name = "./sensor_configuration/" + senzor_name + "_config.txt"
+    if os.path.exists(config_file_name) is False:
+        return "Fisierul de configurare pentru senzor nu exista.", 204
+
+    else:
+
+        file = open(config_file_name, 'w')
+        file.write("fahrenheit")
+        file.close()
+        return "OK"
+
+
+@app.route('/api/<senzor_name>/kelvin', methods=['PUT'])
+def update_config_kelvin(senzor_name):
+    config_file_name = "./sensor_configuration/" + senzor_name + "_config.txt"
+    if os.path.exists(config_file_name) is False:
+        return "Fisierul de configurare pentru senzor nu exista.", 204
+
+    else:
+
+        file = open(config_file_name, 'w')
+        file.write("kelvin")
+        file.close()
+        return "OK"
 
 
 @app.route('/api/directory', methods=['GET'])

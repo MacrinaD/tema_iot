@@ -5,7 +5,7 @@ sursa: https://www.eadan.net/blog/ipc-with-named-pipes/
 from pipes import Pipes
 from threading import Thread
 from message_encoder import create_msg
-from helper import read_temp
+from helper import read_temp_senzor1
 import struct
 
 if __name__ == '__main__':
@@ -20,7 +20,7 @@ if __name__ == '__main__':
             print(my_reader_pipe.get_received_data())
 
             writer_endpoint = my_reader_pipe.connect_to_pipe(Pipes.FIFO_ANSWER)
-            my_reader_pipe.write_to_pipe(writer_endpoint, message=create_msg(bytearray(struct.pack('f', read_temp()))))
+            my_reader_pipe.write_to_pipe(writer_endpoint, message=create_msg(bytearray(struct.pack('f', read_temp_senzor1()))))
 
         except KeyboardInterrupt as kbd_ex:
             print('Closing reader... ')
