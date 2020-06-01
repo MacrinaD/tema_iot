@@ -34,6 +34,7 @@ api.add_resource(resources.UserLogoutAccess, '/logout/access')
 def hello():
     return "Hello World!"
 
+# method used to check if the token is in blacklist
 
 @jwt.token_in_blacklist_loader
 def check_if_token_in_blacklist(decrypted_token):
@@ -42,17 +43,22 @@ def check_if_token_in_blacklist(decrypted_token):
 
 
 @app.route('/api/directory3', methods=['GET'])
-def get_files_from_sensor_configuration():
+def display_files_from_sensor_configuration():
     files = glob.glob("./sensor_configuration/*")
-    response = []
+    all_files = dict()
+    count = 1
     for file in files:
-        response.append(os.path.basename(file))
-    return response
+        all_files[count] = file
+        count = count + 1
+
+    return all_files
 
 
-@app.route('/api/directory3/<sensorName>', methods=['GET'])
+# method used as reader to wait the information from sensor
+
+@app.route('/api/directory3/<sensor_name>', methods=['GET'])
 @jwt_required
-def get_data_from_sensor(sensorName):
+def get_data_from_sensor(sensor_name):
     FIFO_NAME = Pipes.FIFO_REQUEST
     FIFO_NAME_ANSWER = Pipes.FIFO_ANSWER
     my_answer_pipe = Pipes()
@@ -75,9 +81,11 @@ def get_data_from_sensor(sensorName):
     return ret_val
 
 
-@app.route('/api/directory/<senzor_name>', methods=['POST'])
-def post_data_to_sens_configuration(senzor_name):
-    file = './sensor_configuration/' + senzor_name + "_config.txt"
+# method POST for create files like "_config.txt" to write configuration about one or many sensors
+
+@app.route('/api/directory3/<sensor_name>', methods=['POST'])
+def post_data_to_sens_configuration(sensor_name):
+    file = './sensor_configuration/' + sensor_name + "_config.txt"
     print(file)
     data = request.get_data()
     print(data)
@@ -95,9 +103,11 @@ def post_data_to_sens_configuration(senzor_name):
     return "OK"
 
 
-@app.route('/api/<senzor_name>/celsius', methods=['PUT'])
+# method PUT used to write the sensor configuration
+
+@app.route('/api/<sensor_name>/celsius', methods=['PUT'])
 @jwt_required
-def update_config_celsius(senzor_name):
+def update_config_celsius(sensor_name):
     user_id = get_jwt_identity()
     print(user_id)
     if user_id in UsersDatabase.get_users().keys():
@@ -105,45 +115,58 @@ def update_config_celsius(senzor_name):
             return make_response(jsonify({
                 "message": "you are not OWNER!"
             }), 400)
-    config_file_name = "./sensor_configuration/" + senzor_name + "_config.txt"
+    config_file_name = "./sensor_configuration/" + sensor_name + "_config.txt"
     if os.path.exists(config_file_name) is False:
         return "Fisierul de configurare pentru senzor nu exista.", 204
-
     else:
-
         file = open(config_file_name, 'w')
         file.write("celsius")
         file.close()
         return "OK"
 
 
+# method PUT used to write the sensor configuration
+
 @app.route('/api/<sensor_name>/fahrenheit', methods=['PUT'])
-def update_config_Fahrenheit(sensor_name):
+def update_config_fahrenheit(sensor_name):
+    user_id = get_jwt_identity()
+    print(user_id)
+    if user_id in UsersDatabase.get_users().keys():
+        if UsersDatabase.get_users()[user_id]['role'] != 'owner':
+            return make_response(jsonify({
+                "message": "you are not OWNER!"
+            }), 400)
     config_file_name = "./sensor_configuration/" + sensor_name + "_config.txt"
     if os.path.exists(config_file_name) is False:
         return "Fisierul de configurare pentru senzor nu exista.", 204
-
     else:
-
         file = open(config_file_name, 'w')
         file.write("fahrenheit")
         file.close()
         return "OK"
 
 
-@app.route('/api/<senzor_name>/kelvin', methods=['PUT'])
-def update_config_kelvin(senzor_name):
-    config_file_name = "./sensor_configuration/" + senzor_name + "_config.txt"
+# method PUT used to write the sensor configuration
+
+@app.route('/api/<sensor_name>/kelvin', methods=['PUT'])
+def update_config_kelvin(sensor_name):
+    user_id = get_jwt_identity()
+    print(user_id)
+    if user_id in UsersDatabase.get_users().keys():
+        if UsersDatabase.get_users()[user_id]['role'] != 'owner':
+            return make_response(jsonify({
+                "message": "you are not OWNER!"
+            }), 400)
+    config_file_name = "./sensor_configuration/" + sensor_name + "_config.txt"
     if os.path.exists(config_file_name) is False:
         return "Fisierul de configurare pentru senzor nu exista.", 204
-
     else:
-
         file = open(config_file_name, 'w')
         file.write("kelvin")
         file.close()
         return "OK"
 
+# LABORATORUL 1
 # method used to get the files from files_lab1 directory
 
 
@@ -157,7 +180,6 @@ def get_files_from_files_lab1():
 
 # method used to get the files from empdb directory
 
-
 def get_files_from_empdb():
     files = glob.glob("./empdb/*")
     response = []
@@ -165,14 +187,16 @@ def get_files_from_empdb():
         response.append(os.path.basename(file))
     return response
 
-# method used to get the files from empdb directory
-@app.route('/api/directory2/<fileName>', methods=['GET'])
-def get_file_contents_from_empdb(fileName):
+# method used to get the content of files from empdb directory
+
+
+@app.route('/api/directory2/<file_name>', methods=['GET'])
+def get_file_contents_from_empdb(file_name):
     response = get_files_from_empdb()
 
-    print(fileName)
-    if fileName in response:
-        file_to_read = open(glob.glob("./empdb/" + fileName)[0])
+    print(file_name)
+    if file_name in response:
+        file_to_read = open(glob.glob("./empdb/" + file_name)[0])
         response = file_to_read.read()
         file_to_read.close()
     else:
@@ -181,13 +205,15 @@ def get_file_contents_from_empdb(fileName):
     return response
 
 
-@app.route('/api/directory2/<fileName>', methods=['GET'])
-def get_file_contents_from_files_lab1(fileName):
+# method used to get the content of files from files_lab1 directory
+
+@app.route('/api/directory/<file_name>', methods=['GET'])
+def get_file_contents_from_files_lab1(file_name):
     response = get_files_from_files_lab1()
 
-    print(fileName)
-    if fileName in response:
-        file_to_read = open(glob.glob("./files_lab1/" + fileName)[0])
+    print(file_name)
+    if file_name in response:
+        file_to_read = open(glob.glob("./files_lab1/" + file_name)[0])
         response = file_to_read.read()
         file_to_read.close()
     else:
@@ -196,35 +222,41 @@ def get_file_contents_from_files_lab1(fileName):
     return response
 
 
-@app.route('/api/directory/<fileName>', methods=['PUT'])
-def create_or_replace(fileName):
+# method used to put files in files_lab1 directory
+
+@app.route('/api/directory/<file_name>', methods=['PUT'])
+def create_or_replace(file_name):
     files = get_files_from_files_lab1()
     filename_path = ''
-    if fileName in files:
+    if file_name in files:
         return "NOK", 204
     else:
-        filename_path = './files_lab1/' + fileName
+        filename_path = './files_lab1/' + file_name
         os.mknod(filename_path)
 
     return "File " + filename_path + " created", 201
 
 
-@app.route('/api/directory2/<fileName>', methods=['PUT'])
-def create_or_replace_in_empdb(fileName):
+# method used to put files in epmdb directory
+
+@app.route('/api/directory2/<file_name>', methods=['PUT'])
+def create_or_replace_in_empdb(file_name):
     files = get_files_from_empdb()
     filename_path = ''
-    if fileName in files:
+    if file_name in files:
         return "NOK", 204
     else:
-        filename_path = './empdb/' + fileName
+        filename_path = './empdb/' + file_name
         os.mknod(filename_path)
 
     return "File " + filename_path + " created", 201
 
 
-@app.route('/api/directory/<fileName>', methods=['DELETE'])
-def delete_file_from_lab1_files(fileName):
-    file = './files_lab1/'+fileName
+# method used to delete files from files_lab1 directory
+
+@app.route('/api/directory/<file_name>', methods=['DELETE'])
+def delete_file_from_lab1_files(file_name):
+    file = './files_lab1/'+file_name
     if os.path.exists(file) is True:
         os.remove(file)
         return "OK"
@@ -232,9 +264,11 @@ def delete_file_from_lab1_files(fileName):
         return "File not found", 204
 
 
-@app.route('/api/directory2/<fileName>', methods=['DELETE'])
-def delete_file_from_empdb(fileName):
-    file = './empdb/'+fileName
+# method used to delete files from empdb directory
+
+@app.route('/api/directory2/<file_name>', methods=['DELETE'])
+def delete_file_from_empdb(file_name):
+    file = './empdb/'+file_name
     if os.path.exists(file) is True:
         os.remove(file)
         return "OK"
@@ -242,12 +276,14 @@ def delete_file_from_empdb(fileName):
         return "File not found", 204
 
 
-@app.route('/api/directory/<fileName>', methods=['POST'])
-def post_data_to_lab1_files(fileName):
-    file = './files_lab1/' + fileName
+# method used to post into files from files_lab1 directory
+
+@app.route('/api/directory/<file_name>', methods=['POST'])
+def post_data_to_lab1_files(file_name):
+    file = './files_lab1/' + file_name
     print(file)
     data = request.get_data()
-    print (data)
+    print(data)
 
     if not data or len(data) == 0:
         return "No content", 204
@@ -261,12 +297,14 @@ def post_data_to_lab1_files(fileName):
     return "OK"
 
 
-@app.route('/api/directory2/<fileName>', methods=['POST'])
-def post_data_to_emp_file(fileName):
-    file = './empdb/' + fileName
+# method used to post into files from empdb directory
+
+@app.route('/api/directory2/<file_name>', methods=['POST'])
+def post_data_to_emp_file(file_name):
+    file = './empdb/' + file_name
     print(file)
     data = request.get_data()
-    print (data)
+    print(data)
 
     if not data or len(data) == 0:
         return "No content", 204
@@ -279,6 +317,8 @@ def post_data_to_emp_file(fileName):
     file.close()
     return "OK"
 
+
+# method used to display the content of empdb directory
 
 @app.route('/api/directory', methods=['GET'])
 def display_files_from_empdb():
@@ -291,6 +331,8 @@ def display_files_from_empdb():
 
     return all_files
 
+
+# method used to display the content of files_lab1 directory
 
 @app.route('/api/directory2', methods=['GET'])
 def display_files_from_lab1():
@@ -307,31 +349,30 @@ def display_files_from_lab1():
 
 
 @app.route('/api/directory2/employee', methods=['GET'])
-def getAllEmp():
+def get_all_emp():
 
     return jsonify({'emp': empDB})
 
 
-
-empDB=[
+empDB = [
 
  {
 
- 'id':'101',
+     'id': '101',
 
- 'name':'Saravanan S',
+     'name ': 'Saravanan S',
 
- 'title':'Technical Leader'
+     'title': 'Technical Leader'
 
  },
 
  {
 
- 'id':'201',
+     'id': '201',
 
- 'name':'Rajkumar P',
+     'name': 'Rajkumar P',
 
- 'title':'Sr Software Engineer'
+     'title': 'Sr Software Engineer'
 
  }
 
