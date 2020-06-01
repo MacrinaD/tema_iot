@@ -4,6 +4,25 @@ import random
 import glob
 
 
+class UsersDatabase:
+    users = {
+        "Mac": {
+            "password": "aaa",
+            "role": "owner"
+        },
+        "Anf": {
+            "password": "aab",
+            "role": "user"
+        }
+    }
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def get_users():
+        return UsersDatabase.users
+
 
 def decode_value_len(size: bytes) -> int:
     return struct.unpack('<I', size)[0]
@@ -29,6 +48,7 @@ def read_temp_senzor1() -> float:
     elif 'fahrenheit':
         temp_c = temp_c * 9 / 5 + 32
     return temp_c
+
 
 
 

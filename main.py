@@ -10,9 +10,22 @@ import threading
 import time
 from pipes import Pipes
 from helper import decode_value
+import resources
+from flask_restful import Resource, reqparse
+from flask_restful import Api
+from flask_jwt_extended import JWTManager, jwt_required, \
+                                get_jwt_identity
 
+from helper import UsersDatabase
 
 app = Flask(__name__)
+api = Api(app)
+
+app.config['JWT_SECRET_KEY'] = 'jwt-secret-string'
+jwt = JWTManager(app)
+api.add_resource(resources.UserLogin, '/login')
+api.add_resource(resources.UserLogoutAccess, '/logout/access')
+
 
 @app.route("/")
 def hello():
@@ -29,6 +42,7 @@ def get_files_from_sensor_configuration():
 
 
 @app.route('/api/directory3/<sensorName>', methods=['GET'])
+@jwt_required
 def get_data_from_sensor(sensorName):
     FIFO_NAME = Pipes.FIFO_REQUEST
     FIFO_NAME_ANSWER = Pipes.FIFO_ANSWER
@@ -73,7 +87,15 @@ def post_data_to_sens_configuration(senzor_name):
 
 
 @app.route('/api/<senzor_name>/celsius', methods=['PUT'])
+@jwt_required
 def update_config_celsius(senzor_name):
+    user_id = get_jwt_identity()
+    print(user_id)
+    if user_id in UsersDatabase.get_users().keys():
+        if UsersDatabase.get_users()[user_id]['role'] != 'owner':
+            return make_response(jsonify({
+                "message": "you are not OWNER!"
+            }), 400)
     config_file_name = "./sensor_configuration/" + senzor_name + "_config.txt"
     if os.path.exists(config_file_name) is False:
         return "Fisierul de configurare pentru senzor nu exista.", 204
