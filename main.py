@@ -11,17 +11,20 @@ import time
 from pipes import Pipes
 from helper import decode_value
 import resources
+from resources import blacklist
 from flask_restful import Resource, reqparse
 from flask_restful import Api
-from flask_jwt_extended import JWTManager, jwt_required, \
-                                get_jwt_identity
-
+from flask_jwt_extended import JWTManager, jwt_required,\
+                                                get_jwt_identity
 from helper import UsersDatabase
 
 app = Flask(__name__)
 api = Api(app)
 
 app.config['JWT_SECRET_KEY'] = 'jwt-secret-string'
+app.config['JWT_BLACKLIST_ENABLED'] = True
+app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access']
+
 jwt = JWTManager(app)
 api.add_resource(resources.UserLogin, '/login')
 api.add_resource(resources.UserLogoutAccess, '/logout/access')
@@ -30,6 +33,12 @@ api.add_resource(resources.UserLogoutAccess, '/logout/access')
 @app.route("/")
 def hello():
     return "Hello World!"
+
+
+@jwt.token_in_blacklist_loader
+def check_if_token_in_blacklist(decrypted_token):
+    jti = decrypted_token['jti']
+    return jti in blacklist
 
 
 @app.route('/api/directory3', methods=['GET'])
@@ -108,9 +117,9 @@ def update_config_celsius(senzor_name):
         return "OK"
 
 
-@app.route('/api/<senzor_name>/fahrenheit', methods=['PUT'])
-def update_config_Fahrenheit(senzor_name):
-    config_file_name = "./sensor_configuration/" + senzor_name + "_config.txt"
+@app.route('/api/<sensor_name>/fahrenheit', methods=['PUT'])
+def update_config_Fahrenheit(sensor_name):
+    config_file_name = "./sensor_configuration/" + sensor_name + "_config.txt"
     if os.path.exists(config_file_name) is False:
         return "Fisierul de configurare pentru senzor nu exista.", 204
 
@@ -135,8 +144,9 @@ def update_config_kelvin(senzor_name):
         file.close()
         return "OK"
 
+# method used to get the files from files_lab1 directory
 
-@app.route('/api/directory', methods=['GET'])
+
 def get_files_from_files_lab1():
     files = glob.glob("./files_lab1/*")
     response = []
@@ -145,7 +155,9 @@ def get_files_from_files_lab1():
     return response
 
 
-@app.route('/api/directory2', methods=['GET'])
+# method used to get the files from empdb directory
+
+
 def get_files_from_empdb():
     files = glob.glob("./empdb/*")
     response = []
@@ -153,7 +165,7 @@ def get_files_from_empdb():
         response.append(os.path.basename(file))
     return response
 
-
+# method used to get the files from empdb directory
 @app.route('/api/directory2/<fileName>', methods=['GET'])
 def get_file_contents_from_empdb(fileName):
     response = get_files_from_empdb()
@@ -161,6 +173,21 @@ def get_file_contents_from_empdb(fileName):
     print(fileName)
     if fileName in response:
         file_to_read = open(glob.glob("./empdb/" + fileName)[0])
+        response = file_to_read.read()
+        file_to_read.close()
+    else:
+        abort(404)
+    print(response)
+    return response
+
+
+@app.route('/api/directory2/<fileName>', methods=['GET'])
+def get_file_contents_from_files_lab1(fileName):
+    response = get_files_from_files_lab1()
+
+    print(fileName)
+    if fileName in response:
+        file_to_read = open(glob.glob("./files_lab1/" + fileName)[0])
         response = file_to_read.read()
         file_to_read.close()
     else:
@@ -255,32 +282,36 @@ def post_data_to_emp_file(fileName):
 
 @app.route('/api/directory', methods=['GET'])
 def display_files_from_empdb():
-    files = glob.glob("./files_lab1/*")
-    response = dict()
+    files = glob.glob("./empdb/*")
+    all_files = dict()
     count = 1
     for file in files:
-        response[count] = file
+        all_files[count] = file
         count = count + 1
 
-    return response
+    return all_files
 
 
 @app.route('/api/directory2', methods=['GET'])
 def display_files_from_lab1():
-    files = glob.glob("./empdb/*")
-    response = dict()
+    files = glob.glob("./files_lab1/*")
+    all_files = dict()
     count = 1
     for file in files:
-        response[count] = file
+        all_files[count] = file
         count = count + 1
 
-    return response
+    return all_files
+
+# example database employees from lab1
 
 
 @app.route('/api/directory2/employee', methods=['GET'])
 def getAllEmp():
 
     return jsonify({'emp': empDB})
+
+
 
 empDB=[
 
@@ -306,6 +337,4 @@ empDB=[
 
  ]
 if __name__ == "__main__":
-
-
     app.run()
